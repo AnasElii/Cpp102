@@ -13,6 +13,17 @@ struct BoardSquare
 	};
 };
 
+struct WinningPlayer
+{
+	enum E
+	{
+		X,
+		O,
+		Stealmate,
+		None
+	};
+};
+
 class Board
 {
 	int _width;
@@ -46,7 +57,7 @@ public:
 class IRuleEngine
 {
 public:
-	virtual BoardSquare::E HasWon(Board board) = 0;
+	virtual WinningPlayer::E GetWinnerPlayer(Board& board) = 0;
 };
 
 class Game
@@ -57,14 +68,36 @@ public:
 	Game( Board& board, IRuleEngine& iRuleEngine): _board(board), _iRuleEngine(iRuleEngine)
 	{		
 	}
-	BoardSquare::E Run()
-	{		
+	WinningPlayer::E Run()
+	{
+		WinningPlayer::E winningPlayer, currentPlayer = WinningPlayer::X;
+		while ((winningPlayer = _iRuleEngine.GetWinnerPlayer(_board)) == WinningPlayer::None)
+		{
+			Render();
+
+			int input;
+			cout << "Move for " << (currentPlayer == WinningPlayer::X ? 'X' : 'O') << " : ";
+			cin >> input;
+			cin.ignore();
+
+			input -= 1;
+			if (input < 0 || input > _board.GetTotalSquares() || _board.GetSquare(input) != BoardSquare::Empty)
+			{
+				cout << "Invalid Move \n";
+				continue;
+			}
+
+			_board.SetSquare(input, currentPlayer == WinningPlayer::X ? BoardSquare::X : BoardSquare::O);
+			currentPlayer = currentPlayer == WinningPlayer::X ? WinningPlayer::O : WinningPlayer::X;
+		}
+
+		return winningPlayer;
 	}
 
 private:
 	void Render()
 	{
-		for(int i = 1; i < _board.GetTotalSquares(); i++)
+		for(int i = 1; i <= _board.GetTotalSquares(); i++)
 		{
 			cout << GetSquareChar(i, _board.GetSquare(i - 1)) << " ";
 			if ((i % _board.GetWidth()) == 0)
@@ -85,9 +118,22 @@ private:
 
 };
 
+class RuleEngine : public IRuleEngine
+{
+public:
+	WinningPlayer::E GetWinnerPlayer(Board& board)
+	{
+		return WinningPlayer::None;
+	}
+};
+
 int main()
 {
+	Board board(3);
+	RuleEngine ruleEngine;
 
+	Game game(board, ruleEngine);
+	game.Run();
 
 	return 0;
 }
